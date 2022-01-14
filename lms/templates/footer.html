@@ -5,6 +5,7 @@
   from django.utils.translation import ugettext as _
   from lms.djangoapps.branding.api import get_footer
   from openedx.core.djangoapps.lang_pref.api import footer_language_selector_is_enabled
+  from stepwise_plugin.locale.utils import anchor
 %>
 <% 
   footer = get_footer(is_secure=is_secure) 
@@ -12,6 +13,8 @@
   about_dict = anchor(user, 'stepwise-locale-about')
   blog_dict = anchor(user, 'stepwise-locale-blog')
   contact_dict = anchor(user, 'stepwise-locale-contact')
+  tos_dict = anchor(user, 'stepwise-locale-tos')
+  privacy_dict = anchor(user, 'stepwise-locale-privacy')
 %>
 <%namespace name='static' file='static_content.html'/>
 
@@ -59,10 +62,10 @@
         <nav class="nav-legal" aria-label="${_('Legal')}">
           <ul>
               <li class="nav-legal-01">
-                <a href="https://stepwisemath.ai/tos/">Terms of Service</a>
+                <a id="stepwise-locale-tos" href="${tos_dict.get('url')}">${tos_dict.get('value')}</a>
               </li>
               <li class="nav-legal-02">
-                <a href="https://stepwisemath.ai/privacy-policy/">Privacy Policy</a>
+                <a id="stepwise-locale-privacy" href="${privacy_dict.get('url')}">${privacy_dict.get('value')}</a>
               </li>
           </ul>
         </nav>
