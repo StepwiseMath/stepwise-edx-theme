@@ -6,8 +6,13 @@
   from lms.djangoapps.branding.api import get_footer
   from openedx.core.djangoapps.lang_pref.api import footer_language_selector_is_enabled
 %>
-<% footer = get_footer(is_secure=is_secure) %>
-<% icp_license_info = getattr(settings, 'ICP_LICENSE_INFO', {})%>
+<% 
+  footer = get_footer(is_secure=is_secure) 
+  icp_license_info = getattr(settings, 'ICP_LICENSE_INFO', {})
+  about_dict = anchor(user, 'stepwise-locale-about')
+  blog_dict = anchor(user, 'stepwise-locale-blog')
+  contact_dict = anchor(user, 'stepwise-locale-contact')
+%>
 <%namespace name='static' file='static_content.html'/>
 
 % if uses_bootstrap:
@@ -26,13 +31,13 @@
         <nav class="nav-colophon" aria-label="${_('About')}">
           <ol>
               <li class="nav-colophon-01">
-                <a id="stepwise-about" href="https://stepwisemath.ai/">About</a>
+                <a id="stepwise-locale-about" href="${about_dict.get('url')}">${about_dict.get('value')}</a>
               </li>
               <li class="nav-colophon-02">
-                <a id="stepwise-blog" href="https://stepwisemath.ai/blog/">Blog</a>
+                <a id="stepwise-locale-blog" href="${blog_dict.get('url')}">${blog_dict.get('value')}</a>
               </li>
               <li class="nav-colophon-03">
-                <a id="stepwise-contact" href="https://stepwisemath.ai/contact/">Contact</a>
+                <a id="stepwise-locale-contact" href="${contact_dict.get('url')}">${contact_dict.get('value')}</a>
               </li>
           </ol>
         </nav>
