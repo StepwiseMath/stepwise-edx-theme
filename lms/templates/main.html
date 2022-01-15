@@ -10,6 +10,12 @@
 <%page expression_filter="h"/>
 <%! main_css = "style-main-v1" %>
 
+<style>
+  /* hide "View My Records" button on profile page  */
+  .wrapper-profile-records {
+    display: none !important;
+  }
+</style>
 
 <%namespace name='static' file='static_content.html'/>
 <% online_help_token = self.online_help_token() if hasattr(self, 'online_help_token') else None %>
