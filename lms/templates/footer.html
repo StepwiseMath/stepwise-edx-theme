@@ -14,7 +14,11 @@
   footer = get_footer(is_secure=is_secure) 
   icp_license_info = getattr(settings, 'ICP_LICENSE_INFO', {})
 
-  preferred_language = get_user_preference(request.user, LANGUAGE_KEY) or 'en'
+  try:
+    preferred_language = get_user_preference(request.user, LANGUAGE_KEY) or 'en'
+  except Exception as e:
+    preferred_language = 'en'
+
   about_dict = anchor('stepwise-locale-about', preferred_language)
   blog_dict = anchor('stepwise-locale-blog', preferred_language)
   contact_dict = anchor('stepwise-locale-contact', preferred_language)
