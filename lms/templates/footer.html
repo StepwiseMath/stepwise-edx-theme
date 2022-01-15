@@ -5,16 +5,21 @@
   from django.utils.translation import ugettext as _
   from lms.djangoapps.branding.api import get_footer
   from openedx.core.djangoapps.lang_pref.api import footer_language_selector_is_enabled
+
+  from openedx.core.djangoapps.user_api.preferences.api import get_user_preference
+  from openedx.core.djangoapps.lang_pref import LANGUAGE_KEY
   from stepwise_plugin.locale.utils import anchor
 %>
 <% 
   footer = get_footer(is_secure=is_secure) 
   icp_license_info = getattr(settings, 'ICP_LICENSE_INFO', {})
-  about_dict = anchor(user, 'stepwise-locale-about')
-  blog_dict = anchor(user, 'stepwise-locale-blog')
-  contact_dict = anchor(user, 'stepwise-locale-contact')
-  tos_dict = anchor(user, 'stepwise-locale-tos')
-  privacy_dict = anchor(user, 'stepwise-locale-privacy')
+
+  preferred_language = get_user_preference(request.user, LANGUAGE_KEY)
+  about_dict = anchor('stepwise-locale-about', preferred_language)
+  blog_dict = anchor('stepwise-locale-blog', preferred_language)
+  contact_dict = anchor('stepwise-locale-contact', preferred_language)
+  tos_dict = anchor('stepwise-locale-tos', preferred_language)
+  privacy_dict = anchor('stepwise-locale-privacy', preferred_language)
 %>
 <%namespace name='static' file='static_content.html'/>
 
