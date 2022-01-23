@@ -15,6 +15,14 @@
   .wrapper-profile-records {
     display: none !important;
   }
+
+  /* styling for Lotties */
+  .lottie-centered {
+    margin: auto;
+    text-align: center;
+    margin: 25px auto 25px auto;
+    max-width: 500px;
+  }  
 </style>
 
 <%namespace name='static' file='static_content.html'/>
@@ -87,6 +95,8 @@ from common.djangoapps.pipeline_mako import render_require_js_path_overrides
       }
     </script>
   % endif
+  ## see: https://lottiefiles.com/web-player
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
   <script type="text/javascript" src="${static.url(jsi18n_path)}"></script>
   <script type="text/javascript" src="${static.url(ie11_fix_path)}"></script>
   <link rel="icon" type="image/x-icon" href="https://cdn-web.stepwisemath.ai/stepwise-favicon-64x64.png"/>
