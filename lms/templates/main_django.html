@@ -5,8 +5,7 @@
   <meta charset="UTF-8">
   <title>{% block title %}{{ platform_name }}{% endblock %}</title>
 
-  ##<link rel="icon" type="image/x-icon" href="{% favicon_path %}" />
-  <link rel="icon" type="image/x-icon" href="images/stepwise-favicon-64x64.png" />
+  <link rel="icon" type="image/x-icon" href="{% favicon_path %}" />
 
   {% with "js/i18n/"|add:LANGUAGE_CODE|add:"/djangojs.js" as i18njs_path %}
     <script type="text/javascript" src="{% static i18njs_path %}"></script>
@@ -20,6 +19,12 @@
   {% endblock %}
   {% block headextra %}{% endblock %}
   {% render_block "css" %}
+
+  {% if request.course and request.render_course_wide_assets %}
+  {% for css in request.course.course_wide_css %}
+  <link rel="stylesheet" href="{{css}}" type="text/css">
+  {% endfor %}
+  {% endif %}
 
   {% optional_include "head-extra.html"|microsite_template_path %}
 
@@ -47,6 +52,12 @@
     {% javascript 'base_application' %}
 
     {% render_block "js" %}
+
+    {% if request.course and request.render_course_wide_assets %}
+    {% for js in request.course.course_wide_js %}
+    <script type="text/javascript" src="{{js}}"></script>
+    {% endfor %}
+    {% endif %}
 </body>
 </html>
 
