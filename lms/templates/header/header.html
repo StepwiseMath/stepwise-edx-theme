@@ -26,7 +26,7 @@ site_protocol = 'https' if settings.HTTPS == 'on' else 'http'
 stepwise_config_url=u"{protocol}://{domain}{path}".format(
                 protocol=site_protocol,
                 domain=site_domain,
-                path='/stepwise/v1/configuration/prod'
+                path='/stepwise/api/v1/configuration/prod'
             )
 
 %>
