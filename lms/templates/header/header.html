@@ -22,7 +22,7 @@ from openedx.core.djangoapps.site_configuration import helpers as configuration_
 ## mcdaniel aug-2022: URL endpoint for Stepwise API server configuration
 <%
 site_domain = static.get_value('site_domain', settings.SITE_NAME)
-site_protocol = 'https' if settings.HTTPS == 'on' else 'http'
+site_protocol = 'https'
 stepwise_config_url=u"{protocol}://{domain}{path}".format(
                 protocol=site_protocol,
                 domain=site_domain,
