@@ -35,9 +35,9 @@ from opaque_keys.edx.keys import CourseKey
 from xmodule.modulestore.django import modulestore
 
 try:
-  from student.models import is_faculty
+  from stepwise_plugin.utils import is_faculty
 except:
-  log.error('theme error: Could not import is_faculty. You might need to run database migrations.')
+  log.error('theme error: Could not import is_faculty. Is the stepwise_plugin installed and enabled?')
 
 from stepwise_plugin.ecommerce.utils import get_course_id
 import datetime
@@ -97,7 +97,7 @@ try:
     log.info('Faculty user - never block!, exiting.')
     return STOP_RENDERING
 except:
-  log.error('theme error: Could not import is_faculty. You might need to run database migrations.')
+  log.error('theme error: Could not import is_faculty. Is the stepwise_plugin installed and enabled?')
   return STOP_RENDERING
 
 log.info('Timed Exam: Rendering html content for {username}'.format(
