@@ -1,0 +1,422 @@
+## By:   Lawrence McDaniel
+##       lpm0073@gmail.com
+##       lawrencemcdaniel.com
+##
+##       Mar-2020
+##
+## Usage:
+##         html, CSS, Javascript and Python/Django to generate Rover Paywall.
+##
+<%namespace name='static' file='../static_content.html'/>
+
+% if user.is_authenticated:
+<%
+  site_domain = static.get_value('site_domain', settings.SITE_NAME)
+  site_protocol = 'https' if settings.HTTPS == 'on' else 'http'
+
+  ##
+  ## https://roverbyopenstax.com/courses/
+  ##
+  lms_midterm_url=u"{protocol}://{domain}{path}".format(
+                  protocol=site_protocol,
+                  domain=site_domain,
+                  path='/courses/'
+              )
+%>
+
+<%!
+## module-level execution. happens "once"
+## usually this only includes the Python imports, but could also include
+## anything else that you want to execute only once at load time
+import logging
+log = logging.getLogger("edx.student")
+
+from opaque_keys.edx.keys import CourseKey
+from xmodule.modulestore.django import modulestore
+
+try:
+  from student.models import is_faculty
+except:
+  log.error('theme error: Could not import is_faculty. You might need to run database migrations.')
+
+from querium.rover_ecommerce.utils import get_course_id
+import datetime
+course_id = None
+
+%>
+
+<%
+## ==================================================================================
+## for CalStateLA: exam runs up to 3 hours beginning with the moment the student
+## enters the text course area. Duration depends on the course:
+## 1081/1082: 2 hours
+## 1083: 2.5 hours
+## 1040: 3 hours
+##
+## CalStateLA time zone: GMT-8 (changes to GMT-7 for DST)
+## Exam start: Saturday, 05-Dec at 02:59 GMT = Friday, 4-Dec at 18:59 PST
+## Blanket deadline: Wednesday, 09-Dec at 7:59 GMT = Tuesday, 08-Dec at 23:59 PST
+##
+##  Start Dec 05  2020 02 59 00 UTC  (PST+8)
+##  End Dec 09  2020 07 59 00 UTC:  Midnight Sunday plus added two+ days for late exams
+## 
+## Note that the exam_deadline below is when to no longer check, not the due date
+## of the exam.
+## ==================================================================================
+
+course_id = get_course_id(request, context)
+log.info('course_id: {course_id}'.format(course_id=course_id))
+
+exam_start = datetime.datetime(2020, 12, 5, 2, 59, 0)    # 6:59PM GMT-8
+exam_deadline = datetime.datetime(2020, 12, 9, 7, 59, 0)   # midnight PST on Tuesday 12/8
+now = datetime.datetime.now()
+
+if site_domain not in ['calstatela.roverbyopenstax.org', 'dev.roverbyopenstax.org'] :
+  log.info('Timed exam: only runs on calstatela or dev. this is {site_domain}. exiting.'.format(
+    site_domain=site_domain
+  ))
+  return STOP_RENDERING
+
+if now <= exam_start:
+  log.info('Exam start date is in the future, exiting.')
+  return STOP_RENDERING
+
+if now > exam_deadline:
+  log.info('Exam due date has passed. Open edX takes of everything hereon. exiting.')
+  return STOP_RENDERING
+
+## this code is moot if the user is not yet authenticated.
+if not user.is_authenticated:
+  log.info('Not authenticated, exiting.')
+  return STOP_RENDERING
+
+## MAKE SURE THIS DOES NOT BLOCK INSTRUCTORS!!!!!!
+## Career Advise: Faculty should NEVER be blocked by an exam wall!!!!
+try:
+  if is_faculty(user):
+    log.info('Faculty user - never block!, exiting.')
+    return STOP_RENDERING
+except:
+  log.error('theme error: Could not import is_faculty. You might need to run database migrations.')
+  return STOP_RENDERING
+
+log.info('Timed Exam: Rendering html content for {username}'.format(
+  username=user.username
+))
+  %>
+
+<%block name="headextra">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
+
+
+</%block>
+
+
+<%block name="bodyextra">
+<%
+
+%>
+</%block>
+
+
+<%block name="js_extra">
+  ## mcdaniel sep-2019: jQuery Modal for Rover "Exam Expired" popup
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js"></script>
+</%block>
+
+<script>
+  ##  McDaniel Mar-2020. do some basic cookie management to track whether students
+  ##  are beginning a timed exam.
+
+  function roverSetCookie() {
+    ##
+    ## set a cookie with the start time of the exam.
+    ##
+    var cookie_expiration = 30;
+    ## Cookie is named for the specific exam: Midterm2, Midterm3, Final, etc.
+    var key = "roverTimedMidterm3Exam" + "${user.username}" + "${course_id}"
+
+    ## set cookie expiration
+    var d = new Date();
+    d.setTime(d.getTime() + (cookie_expiration * 24 * 60 * 60 * 1000));
+    var expires = "expires="+d.toUTCString();
+
+    ## set cookie value to string representation of create date.
+    var d = new Date();
+    value = d;
+
+    cookie_string = key + "=" + value + ";" + expires + ";path=/"
+    console.info("roverSetCookie() - set new cookie.", cookie_string);
+    document.cookie = cookie_string;
+  }
+
+  function roverGetCookie(key) {
+    ##
+    ## retrieve the start time of the exam.
+    ##
+    var ca = document.cookie.split(';');
+    for(var i = 0; i < ca.length; i++) {
+      var c = ca[i];
+      while (c.charAt(0) == ' ') {
+        c = c.substring(1);
+      }
+      if (c.indexOf(key) == 0) {
+        return c.substring(key.length, c.length);
+      }
+    }
+    return "";
+  }
+
+  function timerWallHTML() {
+    console.info("timerWallHTML() - start");
+    var html = `
+    <style>
+      .rover-dog-img {
+        text-align: right;
+      }
+      .rover-dog-img img {
+        width: 200px;
+      }
+      #RoverExpiredAlert h2 {
+        font-family: Arial, Helvetica, sans-serif;
+        font-weight: bolder;
+        text-align: center;
+        color: red;
+        margin-top: 25px;
+        margin-bottom: 25px;
+      }
+      .message-text {
+        font-family: Arial, Helvetica, sans-serif;
+        margin-bottom: 50px;
+        color: #424242;
+      }
+      .exam-rover-modal {
+        left: 0% !Important;
+      }
+    </style>
+
+    <div id="RoverExpiredAlert" class="exam-rover-modal">
+      <h2>Your Time Limit Has Expired.</h2>
+      <div class="message-text">
+        <p>The time allotted for this mid-term examination has expired. You can no longer view nor submit responses.</p>
+      </div>
+      <div class="rover-dog-img">
+        <img src="${static.url("images/rover-angled-corner.svg")}" alt="Rover Angled Corner">
+      </div>
+    </div>
+    `
+    return html
+  }
+
+  function isMidtermExam(){
+    ## 
+    ## determine if we are on a page that is part of the cal state la mid term exam.
+    ## The mid term exam pages include a bread crumb such as "Spring 2020 Midterm 1083/1040"
+    ## 
+
+    var element = document.getElementById("content");
+    var search_text = element.innerText;
+
+    var n = search_text.search("Important Course Dates");
+    if (n > -1) {
+      console.info("isMidtermExam() - On the course summary page. exiting.");
+      return false
+    }
+    
+    var n = search_text.search("Upcoming Dates");
+    if (n > -1) {
+      console.info("isMidtermExam() - On the course summary page. exiting.");
+      return false
+    }
+
+    n = search_text.search("Course Progress for");
+    if (n > -1) {
+        console.info("isMidtermExam() - on the Course Progress page.");
+        return false;
+    } 
+
+    n = search_text.search("Fall 2020 1081 Midterm 2 Study Guide");
+    if (n > -1) {
+        console.info("isMidtermExam() - Study Guide. This is not an exam.");
+        return false;
+    } 
+    n = search_text.search("Fall 2020 1082 Midterm 2 Study Guide");
+    if (n > -1) {
+        console.info("isMidtermExam() - Study Guide. This is not an exam.");
+        return false;
+    } 
+    n = search_text.search("Fall 2020 1083 Midterm 2 Study Guide");
+    if (n > -1) {
+        console.info("isMidtermExam() - Study Guide. This is not an exam.");
+        return false;
+    } 
+    n = search_text.search("Fall 2020 1040 Midterm 2 Study Guide");
+    if (n > -1) {
+        console.info("isMidtermExam() - Study Guide. This is not an exam.");
+        return false;
+    } 
+    n = search_text.search("Fall 2020 1081 Midterm 3 Study Guide");
+    if (n > -1) {
+        console.info("isMidtermExam() - Study Guide. This is not an exam.");
+        return false;
+    } 
+    n = search_text.search("Fall 2020 1082 Midterm 3 Study Guide");
+    if (n > -1) {
+        console.info("isMidtermExam() - Study Guide. This is not an exam.");
+        return false;
+    } 
+    n = search_text.search("Fall 2020 1083 Midterm 3 Study Guide");
+    if (n > -1) {
+        console.info("isMidtermExam() - Study Guide. This is not an exam.");
+        return false;
+    } 
+    n = search_text.search("Fall 2020 1040 Midterm 3 Study Guide");
+    if (n > -1) {
+        console.info("isMidtermExam() - Study Guide. This is not an exam.");
+        return false;
+    } 
+    n = search_text.search("Fall 2020 1081 Midterm 2");
+    if (n > -1) {
+        console.info("isMidtermExam() - Midterm 2. This is not an exam.");
+        return false;
+    }
+    n = search_text.search("Fall 2020 1082 Midterm 2");
+    if (n > -1) {
+        console.info("isMidtermExam() - Midterm 2. This is not an exam.");
+        return false;
+    }
+    n = search_text.search("Fall 2020 1083 Midterm 2");
+    if (n > -1) {
+        console.info("isMidtermExam() - Midterm 2. This is not an exam.");
+        return false;
+    }
+    n = search_text.search("Fall 2020 1040 Midterm 2");
+    if (n > -1) {
+        console.info("isMidtermExam() - Midterm 2. This is not an exam.");
+        return false;
+    }
+    n = search_text.search("Fall 2020 1081 Midterm 3");
+    if (n > -1) {
+        console.info("isMidtermExam() - this is an exam.");
+        return true;
+    }
+    n = search_text.search("Fall 2020 1082 Midterm 3");
+    if (n > -1) {
+        console.info("isMidtermExam() - this is an exam.");
+        return true;
+    }
+    n = search_text.search("Fall 2020 1081/1082 Midterm 3");
+    if (n > -1) {
+        console.info("isMidtermExam() - this is an exam.");
+        return true;
+    }
+    n = search_text.search("Fall 2020 1083 Midterm 3");
+    if (n > -1) {
+        console.info("isMidtermExam() - this is an exam.");
+        return true;
+    }
+    n = search_text.search("Fall 2020 1040 Midterm 3");
+    if (n > -1) {
+        console.info("isMidtermExam() - this is an exam.");
+        return true;
+    }
+    return false;
+  }
+
+  function raiseTimerWall() {
+
+    var element = document.getElementById("content");
+    var html = timerWallHTML();
+    $('#content').prepend(html);
+
+  }
+
+  function evalRaiseTimerWall(){
+    ##
+    ## Determine whether we should raise the timer wall. 
+    ## returns true if the timer wall should be raised.
+    ## false otherwise.
+
+    if (!isMidtermExam()) {
+      console.info("evalRaiseTimerWall() - exiting.");
+      return false
+    }
+    console.info("evalRaiseTimerWall() - entered a mid term exam area.", window.location);
+
+    ## help desk interventions 
+    ##% if user.username in ['a9cefbfea948bfe6d603e066800b86','229a261bce80ab347f817a5461513f','00b6e5cc1fee2a48cf0447265d0d3d','ab2ba912f2eac73e630c2f5cd4ee47','70551890a647eb6551467826399340','2d53f057316762739f1916d5229c2a','28b551059bc6f9d89bf40182dacab9','85e74f426f3595408e9f9759245013','94d9f3ced24cee2c2267ac2a032d29','_711051_','916a10a6586655b082bee0555f7688','_339324_','0689c030a5727a8bd689d3500511b1','e1d7c4dbe1143d8650ea5f4838d9a3','006af7b4d813c2ca289edd2756da97','_348654_','09346c8675dfae8c8ba6a905500626','e11b314cdfdb95dd1f25226faa1b2a','41222890f159d510314ac6ca11ccdf','a3179b2ecd03f656c3e2de67b2877e','229a261bce80ab347f817a5461513f','2d53f057316762739f1916d5229c2a','eda0378fb6cf615a639117ada3d3f2','57e35ce46d6e0d52960b85d22133c2','2c7f30077002748ebe2cf59a79949f']:
+    ##  force set a v2.00 cookie
+    ##  roverSetCookie();
+    ##% endif
+
+    var key = "roverTimedMidterm3Exam" + "${user.username}" + "${course_id}" + "="
+    var exam_started = roverGetCookie(key);
+
+    if (exam_started == "") {
+      console.info("evalRaiseTimerWall() - start the exam timer!");
+      ## set a v2.00 cookie
+      roverSetCookie();
+      console.info('evalRaiseTimerWall() - setting a v2.00 cookie');
+      return false
+    }
+
+    var dt_started = Date.parse(exam_started);
+    var dt_now = new Date(); 
+    var dt_diff = (dt_now - dt_started); 
+    var diffMinutes = Math.round((dt_diff/1000)/60); 
+
+    ## Dec-2020: Kent
+    ## If the courserun contains this text, then the exam time limit is this many minutes:
+    ## 
+    ## 'MATH1081', 120
+    ## 'MATH1082', 120
+    ## 'MATH1083', 150
+    ## 'MATH1040', 180
+    ##     
+    var exam_duration = 120;
+    var element = document.getElementById("content");
+    var search_text = element.innerText;
+    n = search_text.search("Fall 2020 1083 Midterm 3");
+    if (n > -1) {
+      exam_duration = 150;
+    }
+    n = search_text.search("Fall 2020 1040 Midterm 3");
+    if (n > -1) {
+      exam_duration = 180;
+    }
+
+    console.info("evalRaiseTimerWall() - exam began.", exam_started, dt_started, dt_now, dt_diff);
+    console.info("evalRaiseTimerWall() - exam duration in minutes:", exam_duration);
+    console.info("evalRaiseTimerWall() - elapsed time in minutes:", diffMinutes);
+
+    if (diffMinutes > exam_duration) {
+      ## check elapsed time. return true if more than 3 hours has passed since
+      ## we created our cookie.
+      console.info("evalRaiseTimerWall() - timer wall should be raised.");
+      raiseTimerWall();
+    }
+    return false
+
+}
+
+## mcdaniel mar-2020
+## default entry point. this executes as a diffy.
+$( document ).ready(
+  evalRaiseTimerWall()
+);
+
+
+$(function() {
+  $('#RoverExpiredAlert').modal({
+    fadeDuration: 1000,
+    fadeDelay: 1.25,
+    escapeClose: false,
+    clickClose: false,
+    showClose: false
+  });
+
+});
+
+</script>
+
+% endif
