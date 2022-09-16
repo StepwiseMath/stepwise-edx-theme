@@ -84,6 +84,8 @@ from common.djangoapps.pipeline_mako import render_require_js_path_overrides
   <script type="text/javascript" src="${static.url(ie11_fix_path)}"></script>
   <link rel="icon" type="image/x-icon" href="https://cdn.web.stepwisemath.ai/stepwise-favicon-64x64-1.png"/>
 
+  <!-- McDaniel: oct-2018 Rover styling customizations -->
+  <link type="text/css" rel="stylesheet" href="${static.url('css/rover/main.css')}">
 
 
   <%static:css group='style-vendor'/>
@@ -174,10 +176,62 @@ from common.djangoapps.pipeline_mako import render_require_js_path_overrides
     <link rel="stylesheet" href="${css}" type="text/css">
   % endfor
   % endif
+
+    <!-- JVR: Jan-2019 Add LinkedIn's hopscotch tour -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/hopscotch/0.3.1/css/hopscotch.css"/>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/hopscotch/0.3.1/js/hopscotch.js"></script>
+    <style>
+    /*============================================================================
+      McDaniel Oct-2018:
+      Usage: moved from /static/sass/main.scss
+      JVR ASSIGNMENT PAGE STYLING
+      McDaniel: these look "global" and so i'm exposing these via main.html
+      @import 'rover-variables';
+      ============================================================================*/
+
+
+// mcdaniel jul-2020: new login error message box in juniper.rc3
+.message-copy {
+  color: red;
+}
+
+
+/* ------------------ StepWise Hack ---------------------------------
+  Because the AI does not create a algorithmically generated
+  fingerprint of a question, we have to hack a horrible kludge
+  with the title.  This CSS hides that so prospects dont walk
+  away
+-------------------------------------------------------------------*/
+
+h3.hd.hd-3.problem-header {
+  display: none;
+}
+
+.questionTitle {
+  display: none;
+}
+
+
+    </style>
 </head>
 
 <body class="${static.dir_rtl()} <%block name='bodyclass'/> lang_${LANGUAGE_CODE}">
 
+  ## mcdaniel sep-2019: used for Buy Rover CTA button on course info section "Buy Rover by OpenStax"
+  <style>
+    .date-summary-link {
+      background-color: orange !important;
+      margin: 10px !important;
+      padding: 10px !important;
+      border-radius: 5px !important;
+    }
+  
+    ## mcdaniel mar-2020: switch preview masquerade menu text to white.
+    .wrapper-preview-menu .preview-specific-student-notice {
+    color: white;
+  
+  </style>
+  
 <%static:optional_include_mako file="body-initial.html" is_theming_enabled="True" />
 <div id="page-prompt"></div>
 % if not disable_window_wrap:
@@ -193,6 +247,10 @@ from common.djangoapps.pipeline_mako import render_require_js_path_overrides
 
     <%include file="/page_banner.html" />
 
+    ## mcdaniel may-2020 
+    ## removing the Rover tour until next semester    
+    ##<%include file="rover/main-rover-tour.html" />
+
     <div class="marketing-hero"><%block name="marketing_hero"></%block></div>
 
     <div class="content-wrapper main-container" id="content" dir="${static.dir_rtl()}">
@@ -207,6 +265,18 @@ from common.djangoapps.pipeline_mako import render_require_js_path_overrides
 % if not disable_window_wrap:
   </div>
 % endif
+
+## mcdaniel sep-2019: add popup paywall if student has not yet paid for the
+##                    course and the grace period has elapsed.
+<%include file="rover/rover-trial-period-expired.html" />
+
+## mcdaniel mar-2020: add popup paywall if student has exceeded the time
+##                    allotted for Calstatela timed mid term examination.
+##<%include file="rover/rover-timed-exam-expired.html" />
+
+## mcdaniel may-2020: add popup honor code for Calstatela Final Exam.
+##<%include file="rover/rover-honor-code.html" />
+
 
   <%block name="footer_extra"/>
   <%block name="js_extra"/>

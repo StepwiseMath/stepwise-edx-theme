@@ -1,0 +1,296 @@
+## By:   Lawrence McDaniel
+##       lpm0073@gmail.com
+##       lawrencemcdaniel.com
+##
+##       Mar-2020
+##
+## Usage:
+##         html, CSS, Javascript and Python/Django to generate Rover Paywall.
+##
+<%namespace name='static' file='../static_content.html'/>
+
+% if user.is_authenticated:
+<%
+  site_domain = static.get_value('site_domain', settings.SITE_NAME)
+  site_protocol = 'https' if settings.HTTPS == 'on' else 'http'
+
+  ##
+  ## https://roverbyopenstax.com/courses/
+  ##
+  lms_midterm_url=u"{protocol}://{domain}{path}".format(
+                  protocol=site_protocol,
+                  domain=site_domain,
+                  path='/courses/'
+              )
+%>
+
+<%!
+## module-level execution. happens "once"
+## usually this only includes the Python imports, but could also include
+## anything else that you want to execute only once at load time
+import logging
+log = logging.getLogger("edx.student")
+
+from opaque_keys.edx.keys import CourseKey
+from xmodule.modulestore.django import modulestore
+try:
+  from student.models import is_faculty
+except:
+  log.error('theme error: Could not import is_faculty. You might need to run database migrations.')
+
+import datetime
+%>
+
+<%
+## ==================================================================================
+## for CalStateLA: exam runs up to 3 hours beginning with the moment the student
+## enters the text course area. Duration depends on the course:
+## 1081/1082: 2 hours
+## 1083: 2.5 hours
+## 1040: 3 hours
+##
+## CalStateLA time zone: GMT-8 (changes to GMT-7 for DST)
+## Exam start: Saturday, 05-Dec at 02:59 GMT = Friday, 4-Dec at 18:59 PST
+## Blanket deadline: Wednesday, 09-Dec at 7:59 GMT = Tuesday, 08-Dec at 23:59 PST
+##
+##  Start Dec 05  2020 02 59 00 UTC  (PST+8)
+##  End Dec 09  2020 07 59 00 UTC:  Midnight Sunday plus added two+ days for late exams
+## 
+## Note that the exam_deadline below is when to no longer check, not the due date
+## of the exam.
+## ==================================================================================
+
+exam_start = datetime.datetime(2020, 12, 5, 2, 59, 0)    # 6:59PM GMT-8
+exam_deadline = datetime.datetime(2020, 12, 9, 7, 59, 0)   # midnight PST on Tuesday 12/8
+now = datetime.datetime.now()
+
+if site_domain not in ['calstatela.roverbyopenstax.org', 'dev.roverbyopenstax.org'] :
+  log.info('Honor Code: only runs on calstatela or dev. this is {site_domain}. exiting.'.format(
+    site_domain=site_domain
+  ))
+  return STOP_RENDERING
+
+if now <= exam_start:
+  log.info('Honor Code: Exam start date is in the future, exiting.')
+  return STOP_RENDERING
+
+if now > exam_deadline:
+  log.info('Honor Code: Exam due date has passed. exiting.')
+  return STOP_RENDERING
+
+## this code is moot if the user is not yet authenticated.
+if not user.is_authenticated:
+  log.info('Honor Code: Not authenticated, exiting.')
+  return STOP_RENDERING
+
+## MAKE SURE THIS DOES NOT BLOCK INSTRUCTORS!!!!!!
+## Career Advise: Faculty should NEVER be blocked by an exam wall!!!!
+try:
+  if is_faculty(user):
+    log.info('Honor Code: Faculty user - an honorable user indeed. exiting.')
+    return STOP_RENDERING
+except:
+  log.error('Honor Code: theme error: Could not import is_faculty. You might need to run database migrations.')
+  return STOP_RENDERING
+
+log.info('Honor Code: Rendering html content for {username}'.format(
+  username=user.username
+))
+%>
+
+<%block name="headextra">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
+
+
+</%block>
+
+
+<%block name="bodyextra">
+<%
+
+%>
+</%block>
+
+
+<%block name="js_extra">
+  ## mcdaniel sep-2019: jQuery Modal for Rover "Exam Expired" popup
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js"></script>
+</%block>
+
+<script>
+  ##  McDaniel Mar-2020. do some basic cookie management to track whether students
+  ##  are beginning a timed exam.
+
+  function roverSetHonorCodeCookie() {
+    ##
+    ## set a cookie with the start time of the exam.
+    ##
+    var cookie_expiration = 30;
+    ## Cookie for Midterm 3 = MT3.  Also need to change lookup code.
+    var key = "roverHonorCode" + "MT3" + "${user.username}"
+
+    ## set cookie expiration
+    var d = new Date();
+    d.setTime(d.getTime() + (cookie_expiration * 24 * 60 * 60 * 1000));
+    var expires = "expires="+d.toUTCString();
+
+    ## set cookie value to string representation of create date.
+    var d = new Date();
+    value = d;
+
+    cookie_string = key + "=" + value + ";" + expires + ";path=/"
+    console.info("roverSetHonorCodeCookie() - set new cookie.", cookie_string)
+    document.cookie = cookie_string;
+  }
+
+  function roverGetHonorCodeCookie(key) {
+    ##
+    ## retrieve the start time of the exam.
+    ##
+    var ca = document.cookie.split(';');
+    for(var i = 0; i < ca.length; i++) {
+      var c = ca[i];
+      while (c.charAt(0) == ' ') {
+        c = c.substring(1);
+      }
+      if (c.indexOf(key) == 0) {
+        return c.substring(key.length, c.length);
+      }
+    }
+    return "";
+  }
+
+  function honorWallHTML() {
+    console.info("honorWallHTML() - start")
+    var html = `
+    <style>
+      #agree div {
+        margin-top: 25px;
+        width: 175px;
+        height: 30px;
+        font-size: x-large;
+        font-weight: bold;
+        margin-left: 25%;
+        color: #fff;
+        line-height: 1.25;
+        text-align: center;
+        text-decoration: none;
+        text-indent: 0;
+        background: #00CED1 !important;
+        border: 1px solid #f1f1f1 !important;
+        border-radius: 5px !important;
+        box-shadow: 1px 1px 5px rgba(0,0,0,0.5) !important;
+      }
+
+      .rover-dog-img {
+        text-align: right;
+      }
+      .rover-dog-img img {
+        width: 200px;
+      }
+      #RoverHonorAlert h2 {
+        font-family: Arial, Helvetica, sans-serif;
+        font-weight: bolder;
+        text-align: center;
+        color: red;
+        margin-top: 25px;
+        margin-bottom: 25px;
+      }
+      .message-text {
+        font-family: Arial, Helvetica, sans-serif;
+        margin-bottom: 50px;
+        color: #424242;
+      }
+      .exam-rover-modal {
+        left: 0% !Important;
+      }
+    </style>
+
+    <div id="RoverHonorAlert" class="exam-rover-modal">
+      <h2>Honor Code</h2>
+      <div class="message-text">
+        <p>The timer for this timed exam has now begun.</p>
+        <p>By continuing with the exam, you confirm that you have neither given nor received any unauthorized assistance on this test. This includes any use of a graphing calculator or any website beyond those uses specifically authorized by your instructor.</p>
+        <p>Furthermore, you agree not to discuss this test with anyone until the exam testing period is over for all enrolled individuals.  Failure to obey instructions in any exam may result in a failing grade for the test.</p>
+        <p>Click 'I AGREE' below to indicate your agreement.</p>
+        <a id="agree" onclick="iAgree()"><div>I Agree</div></a>
+      </div>
+      <div class="rover-dog-img">
+        <img src="${static.url("images/rover-angled-corner.svg")}" alt="Rover Angled Corner">
+      </div>
+    </div>
+    `
+    return html
+  }
+  function iAgree(){
+    ##
+    ## Event handler for "I Agree" click.
+    ##
+    console.log('Honor Code: I Agree');
+
+    ## set a v2.00 cookie
+    roverSetHonorCodeCookie();
+    console.info('Honor Code: agree: setting a v2.00 cookie')
+
+    $('#RoverHonorAlert').modal('close');
+
+    ## Force a reload to get rid of gray
+    window.location.reload(false);
+
+  }
+
+
+  function raiseHonorWall() {
+
+    var element = document.getElementById("content");
+    var html = honorWallHTML();
+    $('#content').prepend(html);
+
+
+  }
+
+  function evalRaiseHonorWall(){
+    ##
+    ## Determine whether we should raise the timer wall. 
+    ## returns true if the timer wall should be raised.
+    ## false otherwise.
+    console.info("evalRaiseHonorWall()")
+
+    ## isMidtermExam() comes from rover-timed-exam-expiration.html 
+    if (!isMidtermExam()) {
+      console.info("evalRaiseHonorWall() - not an Exam. exiting.")
+      return false
+    }
+    console.info("evalRaiseHonorWall() - entered a exam area.", window.location)
+
+    ## Cookie for Midterm 3 = MT3.  Also need to change setting code.
+    var key = "roverHonorCode" + "MT3" + "${user.username}" + "="
+    var has_agreed = roverGetHonorCodeCookie(key);
+
+    if (has_agreed == "") {
+      console.info("evalRaiseHonorWall() - has not yet agreed. Raise the Honor Code!")
+      raiseHonorWall();
+    } else {
+      console.log('Honor Code: found cookie: ' + has_agreed);
+    }
+
+
+}
+
+## mcdaniel mar-2020
+## default entry point. this executes as a diffy.
+$( document ).ready(
+  evalRaiseHonorWall()
+);
+
+$('#RoverHonorAlert').modal({
+    fadeDuration: 1000,
+    fadeDelay: 1.25,
+    escapeClose: false,
+    clickClose: false,
+    closeButton: false
+    });
+
+</script>
+
+% endif
