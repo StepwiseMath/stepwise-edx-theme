@@ -7,7 +7,7 @@
  var swReactXBlocks = document.getElementsByClassName("sw-reactjs-xblock");
 
 if (swReactXBlocks.length > 0) {
-    console.log("Stepwise: adding ReactJS libraries")
+    console.log("Stepwise: adding ReactJS libraries");
     var swReactJS = document.createElement("script");
     swReactJS.type = "text/javascript";
     swReactJS.crossorigin="anonymous";
@@ -25,6 +25,6 @@ if (swReactXBlocks.length > 0) {
     swBabel.src = "https://unpkg.com/swBabel-standalone@6/swBabel.min.js";
     document.body.appendChild(swBabel);
 } else {
-    console.log("Stepwise: no SWXBlocks found on this page.")
+    console.log("Stepwise: no SWXBlocks found on this page.");
 }
 </script>
