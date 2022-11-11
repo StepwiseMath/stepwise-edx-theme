@@ -178,6 +178,11 @@ from common.djangoapps.pipeline_mako import render_require_js_path_overrides
     <!-- JVR: Jan-2019 Add LinkedIn's hopscotch tour -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/hopscotch/0.3.1/css/hopscotch.css"/>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/hopscotch/0.3.1/js/hopscotch.js"></script>
+
+
+    ## mcdaniel nov-2022: conditionally add ReactJS libraries for SWXBlocks
+    <%include file="stepwise/add-react.html" />
+
     <style>
     /*============================================================================
       McDaniel Oct-2018:
@@ -188,29 +193,27 @@ from common.djangoapps.pipeline_mako import render_require_js_path_overrides
       ============================================================================*/
 
 
-// mcdaniel jul-2020: new login error message box in juniper.rc3
-.message-copy {
-  color: red;
-}
+      // mcdaniel jul-2020: new login error message box in juniper.rc3
+      .message-copy {
+        color: red;
+      }
 
 
-/* ------------------ StepWise Hack ---------------------------------
-  Because the AI does not create a algorithmically generated
-  fingerprint of a question, we have to hack a horrible kludge
-  with the title.  This CSS hides that so prospects dont walk
-  away
--------------------------------------------------------------------*/
+      /* ------------------ StepWise Hack ---------------------------------
+        Because the AI does not create a algorithmically generated
+        fingerprint of a question, we have to hack a horrible kludge
+        with the title.  This CSS hides that so prospects dont walk
+        away
+      -------------------------------------------------------------------*/
 
-h3.hd.hd-3.problem-header {
-  display: none;
-}
+      h3.hd.hd-3.problem-header {
+        display: none;
+      }
 
-.questionTitle {
-  display: none;
-}
-
-
-    </style>
+      .questionTitle {
+        display: none;
+      }
+    </style>    
 </head>
 
 <body class="${static.dir_rtl()} <%block name='bodyclass'/> lang_${LANGUAGE_CODE}">
@@ -282,8 +285,6 @@ h3.hd.hd-3.problem-header {
   % endfor
   % endif
 
-  ## mcdaniel nov-2022: conditionally add ReactJS libraries for SWXBlocks
-  <%include file="stepwise/add-react.html" />
 </body>
 </html>
 
