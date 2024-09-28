@@ -14,10 +14,9 @@
 <%namespace name='static' file='static_content.html'/>
 <% online_help_token = self.online_help_token() if hasattr(self, 'online_help_token') else None %>
 <%!
-import six
 from lms.djangoapps.branding import api as branding_api
 from django.urls import reverse
-from django.utils.http import urlquote_plus
+from urllib.parse import quote_plus
 from django.utils.translation import gettext as _
 from django.utils.translation import get_language_bidi
 from lms.djangoapps.courseware.access import has_access
@@ -81,10 +80,15 @@ from common.djangoapps.pipeline_mako import render_require_js_path_overrides
     </script>
   % endif
   <script type="text/javascript" src="${static.url(jsi18n_path)}"></script>
+  % if settings.DEBUG:
+    ## Provides a fallback for gettext functions in development environment
+    <script type="text/javascript" src="${static.url('js/src/gettext_fallback.js')}"></script>
+  % endif
   <script type="text/javascript" src="${static.url(ie11_fix_path)}"></script>
-  <link rel="icon" type="image/x-icon" href="https://cdn.web.stepwisemath.ai/stepwise-favicon-64x64-1.png"/>
+  <% favicon_url = branding_api.get_favicon_url() %>
+  <link rel="icon" type="image/x-icon" href="${favicon_url}"/>
 
-
+  <%block name="header_meta"/>
 
   <%static:css group='style-vendor'/>
   % if '/' in self.attr.main_css:
@@ -92,7 +96,7 @@ from common.djangoapps.pipeline_mako import render_require_js_path_overrides
       <%
       rtl_css_file = self.attr.main_css.replace('.css', '-rtl.css')
       %>
-      <link rel="stylesheet" href="${six.text_type(static.url(rtl_css_file))}" type="text/css" media="all" />
+      <link rel="stylesheet" href="${str(static.url(rtl_css_file))}" type="text/css" media="all" />
     % else:
       <link rel="stylesheet" href="${static.url(self.attr.main_css)}" type="text/css" media="all" />
     % endif
@@ -161,6 +165,18 @@ from common.djangoapps.pipeline_mako import render_require_js_path_overrides
     </script>
 % endif
 
+<% ga_4_id = static.get_value("GOOGLE_ANALYTICS_4_ID", settings.GOOGLE_ANALYTICS_4_ID) %>
+% if ga_4_id:
+  <script async src="https://www.googletagmanager.com/gtag/js?id=${ga_4_id}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', '${ga_4_id | n, js_escaped_string}');
+  </script>
+% endif
+
 <% branch_key = static.get_value("BRANCH_IO_KEY", settings.BRANCH_IO_KEY) %>
 % if branch_key and not is_from_mobile_app:
     <script type="text/javascript">
@@ -175,64 +191,44 @@ from common.djangoapps.pipeline_mako import render_require_js_path_overrides
   % endfor
   % endif
 
-    <!-- JVR: Jan-2019 Add LinkedIn's hopscotch tour -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/hopscotch/0.3.1/css/hopscotch.css"/>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/hopscotch/0.3.1/js/hopscotch.js"></script>
+  ## mcdaniel nov-2022: conditionally add ReactJS libraries for SWXBlocks
+  <%include file="stepwise/add-react.html" />
+
+  <style>
+  /*============================================================================
+    McDaniel Oct-2018:
+    Usage: moved from /static/sass/main.scss
+    JVR ASSIGNMENT PAGE STYLING
+    McDaniel: these look "global" and so i'm exposing these via main.html
+    @import 'rover-variables';
+    ============================================================================*/
 
 
-    ## mcdaniel nov-2022: conditionally add ReactJS libraries for SWXBlocks
-    <%include file="stepwise/add-react.html" />
-
-    <style>
-    /*============================================================================
-      McDaniel Oct-2018:
-      Usage: moved from /static/sass/main.scss
-      JVR ASSIGNMENT PAGE STYLING
-      McDaniel: these look "global" and so i'm exposing these via main.html
-      @import 'rover-variables';
-      ============================================================================*/
+    // mcdaniel jul-2020: new login error message box in juniper.rc3
+    .message-copy {
+      color: red;
+    }
 
 
-      // mcdaniel jul-2020: new login error message box in juniper.rc3
-      .message-copy {
-        color: red;
-      }
+    /* ------------------ StepWise Hack ---------------------------------
+      Because the AI does not create a algorithmically generated
+      fingerprint of a question, we have to hack a horrible kludge
+      with the title.  This CSS hides that so prospects dont walk
+      away
+    -------------------------------------------------------------------*/
 
+    h3.hd.hd-3.problem-header {
+      display: none;
+    }
 
-      /* ------------------ StepWise Hack ---------------------------------
-        Because the AI does not create a algorithmically generated
-        fingerprint of a question, we have to hack a horrible kludge
-        with the title.  This CSS hides that so prospects dont walk
-        away
-      -------------------------------------------------------------------*/
-
-      h3.hd.hd-3.problem-header {
-        display: none;
-      }
-
-      .questionTitle {
-        display: none;
-      }
-    </style>    
+    .questionTitle {
+      display: none;
+    }
+  </style>    
 </head>
 
 <body class="${static.dir_rtl()} <%block name='bodyclass'/> lang_${LANGUAGE_CODE}">
 
-  ## mcdaniel sep-2019: used for Buy Rover CTA button on course info section "Buy Rover by OpenStax"
-  <style>
-    .date-summary-link {
-      background-color: orange !important;
-      margin: 10px !important;
-      padding: 10px !important;
-      border-radius: 5px !important;
-    }
-  
-    ## mcdaniel mar-2020: switch preview masquerade menu text to white.
-    .wrapper-preview-menu .preview-specific-student-notice {
-    color: white;
-  
-  </style>
-  
 <%static:optional_include_mako file="body-initial.html" is_theming_enabled="True" />
 <div id="page-prompt"></div>
 % if not disable_window_wrap:
@@ -248,7 +244,6 @@ from common.djangoapps.pipeline_mako import render_require_js_path_overrides
 
     <%include file="/page_banner.html" />
 
-
     <div class="marketing-hero"><%block name="marketing_hero"></%block></div>
 
     <div class="content-wrapper main-container" id="content" dir="${static.dir_rtl()}">
@@ -263,10 +258,6 @@ from common.djangoapps.pipeline_mako import render_require_js_path_overrides
 % if not disable_window_wrap:
   </div>
 % endif
-
-## mcdaniel sep-2019: add paywall
-<%include file="stepwise/paywall.html" />
-
 
   <%block name="footer_extra"/>
   <%block name="js_extra"/>
@@ -284,12 +275,11 @@ from common.djangoapps.pipeline_mako import render_require_js_path_overrides
   <script type="text/javascript" src="${js}"></script>
   % endfor
   % endif
-
 </body>
 </html>
 
 <%def name="login_query()">${
   u"?next={next}".format(
-    next=urlquote_plus(login_redirect_url if login_redirect_url else request.path)
+    next=quote_plus(login_redirect_url if login_redirect_url else request.path)
   ) if (login_redirect_url or (request and not request.path.startswith("/logout"))) else ""
 }</%def>
