@@ -36,6 +36,10 @@ from openedx.features.course_experience import course_home_page_title, DISABLE_C
 </title>
 </%block>
 
+<%block name="head_extra">
+    <link type="text/css" rel="stylesheet" href="https://cdn.${settings.LMS_BASE}/static/css/swpwrxblock.css">
+</%block>
+
 <%block name="header_extras">
 
 % for template_name in ["image-modal"]:
